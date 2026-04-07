@@ -1,89 +1,60 @@
 import * as React from "react";
 
-import { CombineIfNotNever, KeyOf } from "./type";
+import type {
+  InputValues,
+  UseInputHandleProps,
+  UseInputHandleResult,
+} from "./type";
 import { createEmptyObj, createMatchingObj } from "./typeUtil";
 
-interface UseInputType<
-  T extends string | never,
-  E extends string | never,
-  U extends string | never
-> {
-  /**
-   * values - state values containing input keys
-   */
-  values: CombineIfNotNever<
-    [T] extends [never] ? never : { [K in T]: string },
-    [E] extends [never] ? never : { [K in E]: boolean },
-    [U] extends [never] ? never : { [K in U]: number }
-  >;
+const createInitialValues = <
+  T extends string,
+  E extends string,
+  U extends string
+>({
+  strings,
+  booleans,
+  numbers,
+  defaults,
+}: {
+  strings: readonly T[];
+  booleans: readonly E[];
+  numbers: readonly U[];
+  defaults?: UseInputHandleProps<T, E, U>["defaults"];
+}): InputValues<T, E, U> => {
+  // 각 타입별 기본값을 한 번에 합쳐 초기 state를 만든다.
+  return Object.assign(
+    {} as InputValues<T, E, U>,
+    createEmptyObj(strings, defaults?.string ?? ""),
+    createEmptyObj(booleans, defaults?.boolean ?? false),
+    createEmptyObj(numbers, defaults?.number ?? 0)
+  );
+};
 
-  /**
-   * setValues - state setter for values
-   */
-  setValues: React.Dispatch<
-    React.SetStateAction<
-      CombineIfNotNever<
-        [T] extends [never] ? never : { [K in T]: string },
-        [E] extends [never] ? never : { [K in E]: boolean },
-        [U] extends [never] ? never : { [K in U]: number }
-      >
-    >
-  >;
+const resolveInputKey = <T extends string>(
+  target: Pick<
+    HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+    "id" | "name"
+  >,
+  useId: boolean,
+  isKey: (key: string) => key is T
+): T => {
+  // id/name 중 실제로 사용할 키를 골라 검증한다.
+  const key = useId ? target.id : target.name;
 
-  /**
-   * matching - object containing input keys, use it for giving id or name to input elements
-   */
-  matching: Readonly<{ [K in T]: K } & { [K in E]: K } & { [K in U]: K }>;
+  if (!key) {
+    throw new Error(useId ? "id 값이 비어 있습니다." : "name 값이 비어 있습니다.");
+  }
 
-  /**
-   * handlers - simple input change handlers
-   */
-  handlers: {
-    handleString: (
-      id?: boolean
-    ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
-    handleCheck: (
-      id?: boolean
-    ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
-    handleNumber: (
-      id?: boolean
-    ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
-  };
+  if (!isKey(key)) {
+    throw new Error(
+      useId ? "id 값이 등록된 키가 아닙니다." : "name 값이 등록된 키가 아닙니다."
+    );
+  }
 
-  /**
-   * keys - readonly array containing input keys
-   */
-  keys: {
-    readonly allKeys: readonly (T | E | U)[];
-    readonly stringKeys: readonly T[];
-    readonly boolKeys: readonly E[];
-    readonly numberKeys: readonly U[];
-  };
-  /**
-   * checks - type checkers for input keys
-   */
-  checks: {
-    isStrKey: (key: string) => key is T;
-    isBoolKey: (key: string) => key is E;
-    isNumKey: (key: string) => key is U;
-  };
-}
-interface HandleProps<T extends string, E extends string, U extends string> {
-  strings?: T[];
-  booleans?: E[];
-  numbers?: U[];
-  defaults?: {
-    string?: string;
-    boolean?: boolean;
-    number?: number;
-  };
-}
+  return key;
+};
 
-/**
- * @description useInputHandle
- * @param keys input keys
- * @returns {Object} containing values, setValues, handlers, matching, keys, checks
- */
 export const useInputHandle = <
   T extends string = never,
   E extends string = never,
@@ -93,224 +64,116 @@ export const useInputHandle = <
   booleans = [],
   numbers = [],
   defaults,
-}: HandleProps<T, E, U>): UseInputType<T, E, U> => {
-  const stringKeys = React.useMemo(() => [...strings] as const, [strings]);
-  const boolKeys = React.useMemo(() => [...booleans] as const, [booleans]);
-  const numberKeys = React.useMemo(() => [...numbers] as const, [numbers]);
+}: UseInputHandleProps<T, E, U>): UseInputHandleResult<T, E, U> => {
+  const stringKeys = React.useMemo(() => [...strings] as readonly T[], [strings]);
+  const boolKeys = React.useMemo(() => [...booleans] as readonly E[], [booleans]);
+  const numberKeys = React.useMemo(() => [...numbers] as readonly U[], [numbers]);
 
-  type StrKeyType = KeyOf<typeof stringKeys>;
-  type BoolKeyType = KeyOf<typeof boolKeys>;
-  type NumKeyType = KeyOf<typeof numberKeys>;
-
-  const [values, setValues] = React.useState<
-    CombineIfNotNever<
-      [T] extends [never] ? never : { [K in StrKeyType]: string },
-      [E] extends [never] ? never : { [K in BoolKeyType]: boolean },
-      [U] extends [never] ? never : { [K in NumKeyType]: number }
-    >
-  >(
-    Object.assign(
-      createEmptyObj<StrKeyType, string>(defaults?.string ?? "", ...stringKeys),
-      createEmptyObj<BoolKeyType, boolean>(
-        defaults?.boolean ?? false,
-        ...boolKeys
-      ),
-      createEmptyObj<NumKeyType, number>(defaults?.number ?? 0, ...numberKeys)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ) as any
+  const [values, setValues] = React.useState<InputValues<T, E, U>>(() =>
+    createInitialValues({
+      strings: stringKeys,
+      booleans: boolKeys,
+      numbers: numberKeys,
+      defaults,
+    })
   );
 
   const matching = React.useMemo(() => {
+    // 폼 요소에 바로 꽂아 넣을 수 있게 key 매핑 객체를 고정한다.
     return Object.freeze(
       Object.assign(
-        createMatchingObj<StrKeyType>(...strings),
-        createMatchingObj<BoolKeyType>(...booleans),
-        createMatchingObj<NumKeyType>(...numbers)
+        {} as UseInputHandleResult<T, E, U>["matching"],
+        createMatchingObj(stringKeys),
+        createMatchingObj(boolKeys),
+        createMatchingObj(numberKeys)
       )
     );
-  }, [booleans, numbers, strings]);
+  }, [boolKeys, numberKeys, stringKeys]);
 
-  // type checkers
   const isStrKey = React.useCallback(
-    (key: string): key is StrKeyType => {
-      return stringKeys.indexOf(key as StrKeyType) !== -1;
-    },
+    (key: string): key is T => stringKeys.includes(key as T),
     [stringKeys]
   );
 
   const isBoolKey = React.useCallback(
-    (key: string): key is BoolKeyType => {
-      return boolKeys.indexOf(key as BoolKeyType) !== -1;
-    },
+    (key: string): key is E => boolKeys.includes(key as E),
     [boolKeys]
   );
 
   const isNumKey = React.useCallback(
-    (key: string): key is NumKeyType => {
-      return numberKeys.indexOf(key as NumKeyType) !== -1;
-    },
+    (key: string): key is U => numberKeys.includes(key as U),
     [numberKeys]
   );
 
-  // handlers
   const handleString = React.useCallback(
-    (isId?: boolean) => {
-      return (
-        e: React.ChangeEvent<
-          HTMLInputElement | HTMLButtonElement | HTMLTextAreaElement
+    (useId = false) =>
+      (
+        event: React.ChangeEvent<
+          | HTMLButtonElement
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement
         >
       ) => {
-        const { value, id, name } = e.target;
+        const key = resolveInputKey(event.currentTarget, useId, isStrKey);
+        const { value } = event.currentTarget;
 
-        // when id
-        if (isId) {
-          if (typeof id !== "string") {
-            throw new Error("Id is not string or undefined");
-          }
-
-          if (!isStrKey(id)) {
-            throw new Error("Id is not valid key");
-          }
-
-          setValues((prev) => ({
-            ...prev,
-            [id]: value,
-          }));
-        }
-
-        // when name
-        else {
-          if (typeof name !== "string") {
-            throw new Error("Name is not string or undefined");
-          }
-
-          if (!isStrKey(name)) {
-            throw new Error("Name is not valid key");
-          }
-
-          setValues((prev) => ({
-            ...prev,
-            [name]: value,
-          }));
-        }
-      };
-    },
+        setValues((prev) => ({
+          ...prev,
+          [key]: value,
+        }));
+      },
     [isStrKey]
   );
 
   const handleCheck = React.useCallback(
-    (isId?: boolean) => {
-      return (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { checked, id, name } = e.target;
+    (useId = false) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const key = resolveInputKey(event.currentTarget, useId, isBoolKey);
+      const { checked } = event.currentTarget;
 
-        // when id
-        if (isId) {
-          if (typeof id !== "string") {
-            throw new Error("Id is not string or undefined");
-          }
-
-          if (!isBoolKey(id)) {
-            throw new Error("Id is not valid key");
-          }
-
-          setValues((prev) => ({
-            ...prev,
-            [id]: checked,
-          }));
-        }
-
-        // when name
-        else {
-          if (typeof name !== "string") {
-            throw new Error("Name is not string or undefined");
-          }
-
-          if (!isBoolKey(name)) {
-            throw new Error("Name is not valid key");
-          }
-
-          setValues((prev) => ({
-            ...prev,
-            [name]: checked,
-          }));
-        }
-      };
+      setValues((prev) => ({
+        ...prev,
+        [key]: checked,
+      }));
     },
     [isBoolKey]
   );
 
   const handleNumber = React.useCallback(
-    (isId?: boolean) => {
-      return (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { value, id, name } = e.target;
+    (useId = false) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const key = resolveInputKey(event.currentTarget, useId, isNumKey);
+      const { value } = event.currentTarget;
 
-        // when id
-        if (isId) {
-          if (typeof id !== "string") {
-            throw new Error("Id is not string or undefined");
-          }
-
-          if (!isNumKey(id)) {
-            throw new Error("Id is not valid key");
-          }
-
-          // Check if the input is a valid number or empty string
-          if (value === "" || /^\d+(\.\d+)?$/.test(value)) {
-            setValues((prev) => ({
-              ...prev,
-              [id]: value === "" ? "" : Number(value),
-            }));
-          }
-        }
-
-        // when name
-        else {
-          if (typeof name !== "string") {
-            throw new Error("Name is not string or undefined");
-          }
-
-          if (!isNumKey(name)) {
-            throw new Error("Name is not valid key");
-          }
-
-          // Check if the input is a valid number or empty string
-          if (value === "" || /^\d+(\.\d+)?$/.test(value)) {
-            setValues((prev) => ({
-              ...prev,
-              [name]: value === "" ? "" : Number(value),
-            }));
-          }
-        }
-      };
+      // 빈 값은 유지하고, 숫자 문자열만 number로 변환한다.
+      if (value === "" || /^\d+(\.\d+)?$/.test(value)) {
+        setValues((prev) => ({
+          ...prev,
+          [key]: value === "" ? "" : Number(value),
+        }));
+      }
     },
     [isNumKey]
   );
-
-  const keys = {
-    allKeys: [...strings, ...booleans, ...numbers] as const,
-    stringKeys,
-    boolKeys,
-    numberKeys,
-  } as const;
-
-  const handlers = {
-    handleString,
-    handleCheck,
-    handleNumber,
-  } as const;
-
-  const checks = {
-    isStrKey,
-    isBoolKey,
-    isNumKey,
-  } as const;
 
   return {
     values,
     setValues,
     matching,
-    checks,
-    handlers,
-    keys,
+    handlers: {
+      handleString,
+      handleCheck,
+      handleNumber,
+    },
+    keys: {
+      allKeys: [...stringKeys, ...boolKeys, ...numberKeys] as const,
+      stringKeys,
+      boolKeys,
+      numberKeys,
+    },
+    checks: {
+      isStrKey,
+      isBoolKey,
+      isNumKey,
+    },
   };
 };

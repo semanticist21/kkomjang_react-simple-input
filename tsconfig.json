@@ -1,12 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2020",
     "moduleResolution": "Bundler",
-    "module": "ES6",
+    "module": "ESNext",
     "declaration": true,
-    "outDir": "./dist",
+    "declarationMap": true,
     "esModuleInterop": true,
+    "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2020", "DOM"],
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
     "strict": true
   },
   "include": ["lib/**/*"]

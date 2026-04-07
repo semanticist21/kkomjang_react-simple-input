@@ -1,30 +1,12 @@
-export const toReadOnly = <T>(...args: T[]) => {
-  return [...args] as const;
-};
-
 export const createEmptyObj = <T extends string, U>(
-  fill?: U,
-  ...keys: T[]
-) => {
-  const obj = {} as { [K in T]: U };
-
-  if (typeof fill !== "undefined") {
-    keys.forEach((key) => {
-      obj[key] = fill;
-    });
-  }
-
-  return obj;
+  keys: readonly T[],
+  fill: U
+): Record<T, U> => {
+  return Object.fromEntries(keys.map((key) => [key, fill])) as Record<T, U>;
 };
 
 export const createMatchingObj = <T extends string>(
-  ...args: T[]
-): { [K in T]: K } => {
-  const obj = {} as { [K in T]: K };
-
-  args.forEach((arg) => {
-    obj[arg] = arg;
-  });
-
-  return obj;
+  keys: readonly T[]
+): Record<T, T> => {
+  return Object.fromEntries(keys.map((key) => [key, key])) as Record<T, T>;
 };

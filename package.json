@@ -3,41 +3,57 @@
   "private": false,
   "version": "0.2.8",
   "description": "declarative simplified input/checkbox handlers for react.",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "files": [
     "./dist"
   ],
   "scripts": {
-    "build": "npx gulp"
-  },
-  "dependencies": {
-    "react": "^18.2.0"
+    "build": "tsup",
+    "lint": "eslint . --max-warnings=0"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.mjs"
     }
   },
   "devDependencies": {
-    "@types/react": "^18.2.61",
-    "@typescript-eslint/eslint-plugin": "^7.1.1",
-    "@typescript-eslint/parser": "^7.1.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.34.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "gulp": "^4.0.2",
-    "gulp-terser": "^2.1.0",
-    "gulp-typescript": "6.0.0-alpha.1",
-    "merge2": "^1.4.1",
-    "terser": "^5.28.1",
-    "typescript": "^5.3.3"
+    "@eslint/js": "9.39.2",
+    "@types/react": "19.2.7",
+    "eslint": "9.39.3",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "globals": "16.5.0",
+    "react": "19.2.3",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.50.0"
   },
   "peerDependencies": {
-    "react": ">=18.0.0"
+    "react": ">=18.0.0 <20.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@babel/parser": "7.28.5",
+      "@babel/traverse": "7.28.5",
+      "@babel/types": "7.28.5",
+      "minimatch": "3.1.2",
+      "rollup": "4.53.5"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "keywords": [
     "react",
