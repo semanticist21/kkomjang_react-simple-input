@@ -1,7 +1,7 @@
 {
   "name": "@kkoms/react-simple-input",
   "private": false,
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "declarative simplified input/checkbox handlers for react.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -63,7 +63,7 @@
     "simple"
   ],
   "bugs": {
-    "url": "https://github.com/semanticist21/kkom-simple-input/issues",
+    "url": "https://github.com/semanticist21/kkomjang_react-simple-input/issues",
     "email": "semanticist0@gmail.com"
   },
   "license": "MIT",
@@ -74,6 +74,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/semanticist21/kkom-simple-input"
+    "url": "git+https://github.com/semanticist21/kkomjang_react-simple-input.git"
   }
 }
